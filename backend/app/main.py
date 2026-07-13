@@ -4,6 +4,7 @@ import structlog
 from contextlib import asynccontextmanager
 from .core.settings import settings
 from .middleware.logging_middleware import LoggingMiddleware
+from .routers.research import router as research_router
 
 logger = structlog.get_logger(__name__)
 
@@ -48,6 +49,7 @@ async def root():
         "docs": "/docs"
     }
 
+app.include_router(research_router)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
