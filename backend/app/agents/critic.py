@@ -21,7 +21,6 @@ async def review_findings(state: Dict) -> Dict:
     prmopt=ChatPromptTemplate.from_template("""
     Review the following research findings and identify gaps, contradictions, or weak sources.
     Suggest up to 3 follow-up questions if needed.
-
     Findings: {findings}
     """)
 

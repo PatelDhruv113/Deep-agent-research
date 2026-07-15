@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from .core.settings import settings
 from .middleware.logging_middleware import LoggingMiddleware
 from .routers.research import router as research_router
+from .core.config import logger
 
 logger = structlog.get_logger(__name__)
 

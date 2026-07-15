@@ -20,3 +20,12 @@ async def execute_tool(tool_name: str, query: str) -> List[Dict]:
 
     logger.warning("Tool not implemented", tool=tool_name)
     return []
+
+def get_tools_for_type(qtype: str) -> List[str]:
+    """Route tools based on question type"""
+    if qtype == "academic":
+        return ["arxiv", "tavily"]
+    elif qtype == "technical":
+        return ["tavily"]
+    else:
+        return ["tavily"]

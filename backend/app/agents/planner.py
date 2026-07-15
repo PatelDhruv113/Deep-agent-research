@@ -15,8 +15,6 @@ class SubQuestion(BaseModel):
     priority: int 
 
 class ResearchPlan(BaseModel):
-    hypothesis: str
-    key_entities: List[str]
     sub_questions: List[SubQuestion]
     search_strategy: str
 
