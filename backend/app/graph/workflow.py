@@ -35,8 +35,8 @@ def create_research_graph():
         "orchestrator",
         should_continue_research,
         {
-            "critic": "critic",
-            "synthesize": "fact_checker"
+            "searcher": "searcher",
+            "synthesize": "fast_checker"
         }
     )
 
@@ -65,7 +65,8 @@ async def run_research(query: str, session_id: str):
         "current_round" : 0,
         "critic_rounds": 0,
         "total_cost": 0.0,
-        "agent_invocations": 0
+        "agent_invocations": 0,
+        "findings_invocations": 0
     }
 
     logger.info("Starting research session", session_id=session_id, query=query)

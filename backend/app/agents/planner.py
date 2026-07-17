@@ -20,7 +20,7 @@ class ResearchPlan(BaseModel):
 
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
-    temprature=0.3,
+    temperature=0.3,
     api_key=settings.GROQ_API_KEY
 )
 
@@ -37,10 +37,10 @@ async def generate_plan(query: str) -> Dict:
 
     try:
         plan = await structured_llm.ainvoke(
-            prompt.format_message(query=query)
+            prompt.format_messages(query=query)
         )
 
-        logger.info("Research plan generated", sub_questions=len(plan,sub_questions))
+        logger.info("Research plan generated", sub_questions=len(plan.sub_questions))
 
         return plan.model_dump()
     

@@ -9,7 +9,7 @@ logger = structlog.get_logger(__name__)
 
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
-    temprature=0.3,
+    temperature=0.3,
     api_key=settings.GROQ_API_KEY
 )
 
@@ -32,7 +32,7 @@ async def generate_report(state: Dict) -> str:
 
     try:
         response = await llm.ainvoke(
-            prompt.format(
+            prompt.format_messages(
                 query=query,
                 findings=str(findings + verified)[:12000]
             )

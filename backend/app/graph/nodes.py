@@ -2,6 +2,7 @@ from langgraph.graph import StateGraph
 from typing import Dict, Any
 import structlog
 from datetime import datetime
+import asyncio
 
 from ..core.settings import settings
 from .state import ResearchState
@@ -28,21 +29,46 @@ async def planner_node(state: ResearchState) -> ResearchState:
     return state
 
 async def orchestrator_node(state: ResearchState) -> ResearchState:
-    """Main orchestrator - delegateas to searcher"""
+    """Main orchestrator - delegates to searcher"""
     logger.info("Orchestrator started", sub_questions=len(state.get("sub_questions", [])))
 
-    result = await orchestrator.orchestrator(state)
+    result = await orchestrator.orchestrate(state)
     state.update(result)
     state["agent_invocations"] += 1
     return state
 
 async def searcher_node(state: ResearchState) -> ResearchState:
-    """Parallel searcher for sub-quesstions"""
+    """Parallel searcher for sub-questions"""
+    logger.info("Searcher working on sub-questions")
 
-    logger.info("Searcher working on sub-question")
+    delegations = state.get("delegations", [])
+    sub_questions = state.get("sub_questions", [])
 
-    result = await searcher.search_sub_question(state)
+    tasks = []
+    delegated_qs = []
+
+    for delegation in delegations:
+        sub_q_id = delegation.get("sub_question_id")
+        sub_q = next((q for q in sub_questions if q.get("id") == sub_q_id), None)
+        if sub_q:
+            delegated_qs.append(sub_q)
+            tasks.append(
+                searcher.search_sub_question(sub_q, delegation.get("assigned_tools", ["tavily"]))
+            )
+
+    if tasks:
+        results = await asyncio.gather(*tasks)
+        all_findings = [finding for sublist in results for finding in sublist]
+
+        if state.get("findings") is None:
+            state["findings"] = []
+        state["findings"].extend(all_findings)
+
+        for sub_q in delegated_qs:
+            sub_q["status"] = "done"
+
     state["findings_invocations"] += 1
+    state["agent_invocations"] += 1
     return state
 
 async def critic_node(state:ResearchState) -> ResearchState:
@@ -76,8 +102,11 @@ async def synthesizer_node(state: ResearchState) -> ResearchState:
 
 def should_continue_research(state: ResearchState) -> str:
     """Decide whether to continue research or synthesize"""
-    if state["critic_rounds"] >= settings.MAX_CRITIC_ROUNDS:
+    if state.get("critic_rounds", 0) >= settings.MAX_CRITIC_ROUNDS:
         return "synthesize"
-    if len(state.get("findings", []) > 0 and state.get("plan")):
-        return "critic"
-    return "orchestrator" 
+    
+    status = state.get("status")
+    if status == "researching":
+        return "searcher"
+        
+    return "synthesize" 

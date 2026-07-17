@@ -10,11 +10,11 @@ logger = structlog.get_logger(__name__)
 
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
-    temprature=0.1,
+    temperature=0.1,
     api_key=settings.GROQ_API_KEY
 )
 
-async def verifiy_claims(state: Dict) -> Dict:
+async def verify_claims(state: Dict) -> Dict:
     """Fact checker with trust scoring"""
     findings = state.get("findings", [])
     verified_claims = []
@@ -44,4 +44,4 @@ async def verifiy_claims(state: Dict) -> Dict:
     
     except Exception as e:
         logger.error("Fact checker failed", error=str(e))
-        return {"verfied_claims": []}
+        return {"verified_claims": []}

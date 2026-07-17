@@ -5,9 +5,11 @@ from typing import Dict
 
 from ..core.settings import settings
 
-logger = ChatGroq(
+logger = structlog.get_logger(__name__)
+
+llm = ChatGroq(
     model="llama-3.3-70b-versatile",
-    temprature=0.2,
+    temperature=0.2,
     api_key=settings.GROQ_API_KEY
 )
 
@@ -18,7 +20,7 @@ async def review_findings(state: Dict) -> Dict:
     if not findings:
         return {"critic_feedback": "No findings to review yet"}
     
-    prmopt=ChatPromptTemplate.from_template("""
+    prompt = ChatPromptTemplate.from_template("""
     Review the following research findings and identify gaps, contradictions, or weak sources.
     Suggest up to 3 follow-up questions if needed.
     Findings: {findings}
@@ -26,7 +28,7 @@ async def review_findings(state: Dict) -> Dict:
 
     try:
         response = await llm.ainvoke(
-            prompt.format(findings=str(findings)[:8000])
+            prompt.format_messages(findings=str(findings)[:8000])
         )
 
         return {
@@ -34,5 +36,5 @@ async def review_findings(state: Dict) -> Dict:
             "needs_more_research": len(findings) < 8
         }
     except Exception as e:
-        logger.error("critic failed", error(e))
+        logger.error("Critic failed", error=str(e))
         return {"critic_feedback": "Review failed", "needs_more_research": False}

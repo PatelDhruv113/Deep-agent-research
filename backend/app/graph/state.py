@@ -21,27 +21,23 @@ class Claim(BaseModel):
 class ResearchState(TypedDict):
     """Shared state for the entire LangGraph workflow"""
 
-    # input
     research_session_id: str
     query: str
     user_id: Optional[str] = None
 
-    # planing
     plan: Optional[Dict] = None
     sub_questions: List[Dict]
 
-    # findings
     findings: List[Dict] = None
     verified_claims: List[Claim]
     rejected_claims: List[Dict]
 
-    # control
     current_round: int = 0
     critic_rounds: int = 0
     total_cost: float = 0.0
     agent_invocations: int = 0
+    findings_invocations: int = 0
 
-    # status
     status: str = "in_progress"
     final_report: Optional[str] = None
     error: Optional[str] = None
