@@ -27,6 +27,9 @@ class ResearchState(TypedDict):
 
     plan: Optional[Dict] = None
     sub_questions: List[Dict]
+    delegations: Optional[List[Dict]] = None
+    critic_feedback: Optional[str] = None
+    needs_more_research: Optional[bool] = None
 
     findings: List[Dict] = None
     verified_claims: List[Claim]
@@ -39,6 +42,7 @@ class ResearchState(TypedDict):
     findings_invocations: int = 0
 
     status: str = "in_progress"
+    active_node: Optional[str] = None
     final_report: Optional[str] = None
     error: Optional[str] = None
 

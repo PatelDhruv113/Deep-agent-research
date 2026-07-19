@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
-from pydantic import BaseModel, Field
-from typing import List, Dict
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Dict, Union
 import structlog
 import uuid
 
@@ -45,7 +45,15 @@ async def orchestrate(state: Dict) -> Dict:
             class NewSubQuestion(BaseModel):
                 question: str
                 type: str = Field(..., description="academic | current_events | technical | general")
-                priority: int
+                priority: Union[int, str] = Field(..., description="1-5 priority rank (1 is highest)")
+
+                @field_validator('priority', mode='before')
+                @classmethod
+                def coerce_priority(cls, v):
+                    try:
+                        return int(v)
+                    except (ValueError, TypeError):
+                        return 1
             
             class NewSubQuestions(BaseModel):
                 sub_questions: List[NewSubQuestion]

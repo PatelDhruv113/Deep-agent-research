@@ -31,12 +31,12 @@ async def verify_claims(state: Dict) -> Dict:
         for finding in findings[:6]:
             claim_text = finding.get("content", "")[:500]
 
-            turst_score = calculate_trust_score(finding)
+            trust_score = calculate_trust_score(finding)
 
             verified_claims.append({
                 "claim": claim_text[:200],
                 "sources": [finding.get("source")],
-                "trust_score": turst_score,
+                "trust_score": trust_score,
                 "reasoning": "Based on available sources"
             })
 

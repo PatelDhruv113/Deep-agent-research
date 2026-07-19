@@ -6,22 +6,21 @@ import asyncio
 
 from ..core.settings import settings
 from .state import ResearchState
-from ..agents import(
-    planner,
-    orchestrator,
-    searcher,
-    critic,
-    fact_checker,
-    synthesizer
-)
+from ..agents.planner import generate_plan
+from ..agents.orchestrator import orchestrate
+from ..agents.searcher import search_sub_question
+from ..agents.critic import review_findings
+from ..agents.fact_checker import verify_claims
+from ..agents.synthesizer import generate_report
 
 logger = structlog.get_logger(__name__)
 
 async def planner_node(state: ResearchState) -> ResearchState:
     """Generate research plan and sub-questions"""
     logger.info("Planner agent started", query=state["query"])
+    state["active_node"] = "planner"
 
-    plan = await planner.generate_plan(state["query"])
+    plan = await generate_plan(state["query"])
 
     state["plan"] = plan
     state["sub_questions"]=plan.get("sub_questions", [])
@@ -31,8 +30,9 @@ async def planner_node(state: ResearchState) -> ResearchState:
 async def orchestrator_node(state: ResearchState) -> ResearchState:
     """Main orchestrator - delegates to searcher"""
     logger.info("Orchestrator started", sub_questions=len(state.get("sub_questions", [])))
+    state["active_node"] = "orchestrator"
 
-    result = await orchestrator.orchestrate(state)
+    result = await orchestrate(state)
     state.update(result)
     state["agent_invocations"] += 1
     return state
@@ -40,6 +40,7 @@ async def orchestrator_node(state: ResearchState) -> ResearchState:
 async def searcher_node(state: ResearchState) -> ResearchState:
     """Parallel searcher for sub-questions"""
     logger.info("Searcher working on sub-questions")
+    state["active_node"] = "searcher"
 
     delegations = state.get("delegations", [])
     sub_questions = state.get("sub_questions", [])
@@ -53,7 +54,7 @@ async def searcher_node(state: ResearchState) -> ResearchState:
         if sub_q:
             delegated_qs.append(sub_q)
             tasks.append(
-                searcher.search_sub_question(sub_q, delegation.get("assigned_tools", ["tavily"]))
+                search_sub_question(sub_q, delegation.get("assigned_tools", ["tavily"]))
             )
 
     if tasks:
@@ -74,8 +75,9 @@ async def searcher_node(state: ResearchState) -> ResearchState:
 async def critic_node(state:ResearchState) -> ResearchState:
     """Quality control -finds gaps"""
     logger.info("Critic agent reviewing findings")
+    state["active_node"] = "critic"
 
-    result  = await critic.review_findings(state)
+    result  = await review_findings(state)
     state.update(result)
     state["critic_rounds"] += 1
     state["agent_invocations"] += 1
@@ -84,8 +86,9 @@ async def critic_node(state:ResearchState) -> ResearchState:
 async def fact_checker_node(state: ResearchState) -> ResearchState:
     """Verify claims with trust scoring"""
     logger.info("Fast Checker started")
+    state["active_node"] = "fact_checker"
 
-    result = await fact_checker.verify_claims(state)
+    result = await verify_claims(state)
     state.update(result)
     state["agent_invocations"] += 1
     return state
@@ -93,10 +96,12 @@ async def fact_checker_node(state: ResearchState) -> ResearchState:
 async def synthesizer_node(state: ResearchState) -> ResearchState:
     """Generate final report"""
     logger.info("Synhesizer creating final report")
+    state["active_node"] = "synthesizer"
 
-    report = await synthesizer.generate_report(state)
+    report = await generate_report(state)
     state["final_report"] = report
     state["status"] = "completed"
+    state["active_node"] = "final"
     state["agent_invocations"] += 1
     return state
 

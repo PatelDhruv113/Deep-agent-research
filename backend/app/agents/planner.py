@@ -1,8 +1,8 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
-from pydantic import BaseModel, Field 
-from typing import List, Dict
-import structlog 
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Dict, Union
+import structlog
 
 from ..core.settings import settings
 
@@ -12,7 +12,15 @@ class SubQuestion(BaseModel):
     id: str
     question: str 
     type: str = Field(..., description="academic | current_events | technical | general")
-    priority: int 
+    priority: Union[int, str] = Field(..., description="1-5 priority rank (1 is highest)")
+
+    @field_validator('priority', mode='before')
+    @classmethod
+    def coerce_priority(cls, v):
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return 1
 
 class ResearchPlan(BaseModel):
     sub_questions: List[SubQuestion]
@@ -51,7 +59,7 @@ async def generate_plan(query: str) -> Dict:
             "hypothesis": "Direct research on the query",
             "key-entities": [],
             "sub_questions": [
-                {"id": "q1", "questions": query, "type": "general", "priority": 1}
+                {"id": "q1", "question": query, "type": "general", "priority": 1}
             ],
             "search_strategy": "Basic web search"
         }

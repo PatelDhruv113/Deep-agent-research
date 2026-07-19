@@ -62,5 +62,52 @@ async def run_background_research(query: str, session_id: str, user_id: Optional
 @router.get("/research/{session_id}")
 async def get_research_status(session_id: str):
     """Get status of a research session"""
+    from ..graph.workflow import research_graph
 
-    return {"session_id": session_id, "status": "in_progress"}
+    config = {"configurable": {"thread_id": session_id}}
+    try:
+        state_snapshot = await research_graph.aget_state(config)
+        if not state_snapshot or not state_snapshot.values:
+            return {
+                "session_id": session_id,
+                "status": "not_found",
+                "message": "Research session not found or not started yet."
+            }
+
+        values = state_snapshot.values
+        verified_claims = []
+        for claim in values.get("verified_claims", []):
+            if hasattr(claim, "model_dump"):
+                verified_claims.append(claim.model_dump())
+            else:
+                verified_claims.append(claim)
+
+        return {
+            "session_id": session_id,
+            "status": values.get("status", "in_progress"),
+            "active_node": values.get("active_node"),
+            "query": values.get("query"),
+            "sub_questions": values.get("sub_questions", []),
+            "findings_count": len(values.get("findings", []) or []),
+            "critic_rounds": values.get("critic_rounds", 0),
+            "final_report": values.get("final_report"),
+            "verified_claims": verified_claims,
+        }
+    except Exception as e:
+        logger.error("Failed to get research status", session_id=session_id, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to get research status: {str(e)}")
+
+@router.post("/research/test")
+async def test_research(request: ResearchRequest):
+    """Quick synchronous test endpoint"""
+    session_id = str(uuid.uuid4())
+    
+    try:
+        result = await run_research(request.query, session_id)
+        return {
+            "session_id": session_id,
+            "status": result.get("status", "completed"),
+            "report_preview": result.get("final_report", "No report generated")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
